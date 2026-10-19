@@ -9,8 +9,10 @@ app.disable("x-powered-by");
 const NTPC_OPENID_IDENTIFIER = "https://openid.ntpc.edu.tw/";
 
 function getBaseUrl() {
-  // Production should always define this exact public HTTPS URL.
-  return (process.env.APP_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
+  // APP_BASE_URL supports a custom domain. VERCEL_URL makes first deployment work
+  // without manually entering the generated *.vercel.app address.
+  const deployedUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
+  return (process.env.APP_BASE_URL || deployedUrl || "http://localhost:3000").replace(/\/$/, "");
 }
 
 function createRelyingParty() {
