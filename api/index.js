@@ -23,7 +23,10 @@ function createRelyingParty() {
     false,
     [
       new openid.SimpleRegistration({
-        fullname: true
+        fullname: true,
+        country: true,
+        language: true,
+        timezone: true
       })
     ]
   );
