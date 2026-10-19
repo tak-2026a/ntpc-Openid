@@ -213,7 +213,8 @@ app.all("/auth/ntpc/callback", (req, res) => {
       if (sessionError) throw sessionError;
       setSessionCookie(res, token);
       res.redirect(303, "/dashboard");
-    } catch {
+    } catch (error) {
+      console.error("OpenID session setup failed:", error);
       res.status(500).type("html").send(page("無法建立安全工作階段", '<h1>登入未完成</h1><p class="error">系統無法建立安全工作階段，未顯示任何學生資料。</p>'));
     }
   });
