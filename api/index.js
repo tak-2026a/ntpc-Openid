@@ -4,8 +4,11 @@ const crypto = require("crypto");
 const express = require("express");
 const openid = require("openid");
 const { createClient } = require("@supabase/supabase-js");
+const multer = require("multer");
+const XLSX = require("xlsx");
 
 const app = express();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 app.disable("x-powered-by");
 app.use((_req, res, next) => {
   res.set({
@@ -74,6 +77,44 @@ function profileRows(user) {
     ["姓名", user.display_name],
     ["身分別", roles.join("、") || "已驗證使用者"]
   ].map(([label, value]) => '<div class="profile-row"><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></div>').join("");
+}
+
+function canImportRoster(user) {
+  return Array.isArray(user.openid_roles) && user.openid_roles.includes("教師");
+}
+
+async function importRoster(workbook, supabase) {
+  const schoolYear = String(process.env.SCHOOL_YEAR || "115");
+  const totals = { classes: 0, students: 0, enrollments: 0, skipped: 0 };
+  for (const sheetName of workbook.SheetNames) {
+    const match = sheetName.match(/^(\d)(\d{2})(.*?)(?:\(|$)/);
+    if (!match) { totals.skipped += 1; continue; }
+    const grade = Number(match[1]);
+    const classNumber = Number(match[2]);
+    const subject = (match[3] || "未分類").trim();
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "", raw: false });
+    const { data: classInfo, error: classError } = await supabase.from("classes").upsert({
+      school_year: schoolYear, grade, class_number: classNumber, subject, source_sheet: sheetName
+    }, { onConflict: "school_year,grade,class_number,subject" }).select("id").single();
+    if (classError) throw classError;
+    totals.classes += 1;
+    for (const row of rows.slice(3)) {
+      const seatNumber = Number(row[0]);
+      const fullName = String(row[1] || "").trim();
+      if (!Number.isInteger(seatNumber) || seatNumber < 1 || !fullName) continue;
+      const { data: student, error: studentError } = await supabase.from("students").upsert({
+        school_year: schoolYear, grade, class_number: classNumber, seat_number: seatNumber, full_name: fullName
+      }, { onConflict: "school_year,grade,class_number,seat_number" }).select("id").single();
+      if (studentError) throw studentError;
+      totals.students += 1;
+      const { error: enrollmentError } = await supabase.from("class_enrollments").upsert({
+        class_id: classInfo.id, student_id: student.id
+      }, { onConflict: "class_id,student_id" });
+      if (enrollmentError) throw enrollmentError;
+      totals.enrollments += 1;
+    }
+  }
+  return totals;
 }
 
 function parseCookies(req) {
@@ -196,6 +237,28 @@ app.get("/dashboard", async (req, res) => {
   }).join("");
   const empty = cards ? "" : '<p class="note">尚未指派可瀏覽的班級。即使是教師帳號，也必須由系統管理者在私有資料庫逐班授權。</p>';
   res.type("html").send(page("我的班級", '<h1>我的班級</h1><div class="profile">' + profileRows(user) + '</div><div class="cards">' + cards + '</div>' + empty + '<p><a class="button secondary" href="/logout">登出</a></p>'));
+});
+
+app.get("/admin/import-roster", async (req, res) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  if (!canImportRoster(user)) return res.status(403).type("html").send(page("沒有權限", '<h1>沒有權限</h1><p>只有教師帳號可匯入名冊。</p>'));
+  res.type("html").send(page("匯入班級名冊", '<h1>匯入班級名冊</h1><p>此操作會將 Excel 內的班級、座號與姓名寫入私有資料庫。匯入不會自動授權任何人瀏覽班級。</p><form method="post" action="/admin/import-roster" enctype="multipart/form-data"><p><input type="file" name="roster" accept=".xls,.xlsx" required></p><button class="button" type="submit">匯入名冊</button></form><p><a class="button secondary" href="/dashboard">取消</a></p>'));
+});
+
+app.post("/admin/import-roster", upload.single("roster"), async (req, res) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  if (!canImportRoster(user)) return res.status(403).type("html").send(page("沒有權限", '<h1>沒有權限</h1><p>只有教師帳號可匯入名冊。</p>'));
+  const file = req.file;
+  if (!file || !/\.xlsx?$/i.test(file.originalname || "")) return res.status(400).type("html").send(page("匯入失敗", '<h1>請選擇 Excel 檔</h1><p class="error">只接受 .xls 或 .xlsx 檔案。</p><a class="button" href="/admin/import-roster">返回</a>'));
+  try {
+    const workbook = XLSX.read(file.buffer, { type: "buffer" });
+    const totals = await importRoster(workbook, getSupabase());
+    res.type("html").send(page("匯入完成", '<h1>名冊匯入完成</h1><p>已處理 ' + escapeHtml(totals.classes) + ' 個班級工作表與 ' + escapeHtml(totals.students) + ' 筆學生資料。</p><p>下一步需要逐班設定瀏覽權限，完成前不會在儀表板顯示學生名冊。</p><a class="button" href="/dashboard">回我的班級</a>'));
+  } catch {
+    res.status(500).type("html").send(page("匯入失敗", '<h1>名冊匯入失敗</h1><p class="error">檔案格式或資料庫寫入發生問題，未顯示任何學生資料。</p><a class="button" href="/admin/import-roster">返回</a>'));
+  }
 });
 
 app.get("/classes/:classId", async (req, res) => {
