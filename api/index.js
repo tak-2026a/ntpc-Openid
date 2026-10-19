@@ -27,15 +27,14 @@ const SESSION_DAYS = 8;
 // Coordinates reproduce the computer-room layout supplied by the teacher.
 // The lecture desk is at the bottom; 17 and 18 are the two special front seats.
 const SEAT_TEMPLATE = [
-  ["left-1", 24, 14, 16], ["left-2", 42, 14, 33], ["left-3", 58, 14, 12],
-  ["left-4", 24, 34, 15], ["left-5", 42, 34, 31], ["left-6", 58, 34, 11],
-  ["left-7", 24, 54, 14], ["left-8", 42, 54, 30], ["left-9", 58, 54, 10],
-  ["left-10", 24, 74, 13], ["left-11", 42, 74, 29], ["left-12", 58, 74, 9],
-  ["right-1", 70, 14, 28], ["right-2", 80, 14, 8], ["right-3", 90, 14, 34], ["right-4", 99, 14, 4],
-  ["right-5", 70, 34, 27], ["right-6", 80, 34, 7], ["right-7", 90, 34, 23], ["right-8", 99, 34, 3],
-  ["right-9", 70, 54, 26], ["right-10", 80, 54, 6], ["right-11", 90, 54, 22], ["right-12", 99, 54, 2],
-  ["right-13", 70, 74, 25], ["right-14", 80, 74, 5], ["right-15", 90, 74, 21], ["right-16", 99, 74, 1],
-  ["front-17", 45, 91, 17], ["front-18", 55, 91, 18]
+  ["left-13", 8, 14, null], ["left-1", 24, 14, 16], ["left-2", 42, 14, 33], ["left-3", 58, 14, 12],
+  ["left-14", 8, 34, null], ["left-4", 24, 34, 15], ["left-5", 42, 34, 31], ["left-6", 58, 34, 11],
+  ["left-15", 8, 54, 17], ["left-7", 24, 54, 14], ["left-8", 42, 54, 30], ["left-9", 58, 54, 10],
+  ["left-16", 8, 74, 18], ["left-10", 24, 74, 13], ["left-11", 42, 74, 29], ["left-12", 58, 74, 9],
+  ["right-1", 70, 14, 28], ["right-2", 79, 14, 8], ["right-3", 88, 14, 34], ["right-4", 96, 14, 4],
+  ["right-5", 70, 34, 27], ["right-6", 79, 34, 7], ["right-7", 88, 34, 23], ["right-8", 96, 34, 3],
+  ["right-9", 70, 54, 26], ["right-10", 79, 54, 6], ["right-11", 88, 54, 22], ["right-12", 96, 54, 2],
+  ["right-13", 70, 74, 25], ["right-14", 80, 74, 5], ["right-15", 90, 74, 21], ["right-16", 96, 74, 1]
 ];
 
 function getBaseUrl() {
@@ -69,7 +68,7 @@ function escapeHtml(value) {
 function page(title, content) {
   return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' +
     escapeHtml(title) +
-    '</title><style>body{margin:0;min-height:100vh;background:#f4f8fb;color:#17324d;font:16px/1.6 system-ui,sans-serif}main{box-sizing:border-box;width:min(94vw,1100px);margin:3rem auto;padding:2.25rem;background:#fff;border-radius:18px;box-shadow:0 14px 38px #17324d1c}h1{margin-top:0}p{color:#52677a}.button{display:inline-block;padding:.7rem 1.2rem;border:0;border-radius:9px;background:#087dbe;color:#fff;text-decoration:none;font-weight:700;cursor:pointer}.button.secondary{background:#e8f1f6;color:#075b8c}.profile,.table{margin:1.25rem 0;border:1px solid #dce8f0;border-radius:10px;overflow:hidden}.profile-row{display:grid;grid-template-columns:7rem 1fr;gap:.75rem;padding:.7rem 1rem;border-bottom:1px solid #dce8f0}.profile-row:last-child{border-bottom:0}.profile-row span{color:#52677a}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:.7rem;text-align:left;border-bottom:1px solid #dce8f0}.table th{background:#f6fafc;color:#52677a}.table tr:last-child td{border-bottom:0}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem}.card{display:block;padding:1.1rem;border:1px solid #dce8f0;border-radius:10px;color:inherit;text-decoration:none}.card:hover{border-color:#087dbe}.note{font-size:.9rem}.error{color:#a21d2b}.seat-map{position:relative;height:720px;min-width:780px;margin:1.25rem 0;border:2px solid #17324d;border-radius:14px;overflow:hidden;background:linear-gradient(90deg,#f6fafc 0 64%,#eef5f9 64%)}.seat-map:before{content:"電腦教室（可拖曳調整）";position:absolute;top:12px;left:18px;color:#52677a;font-size:.9rem}.seat{position:absolute;transform:translate(-50%,-50%);width:84px;min-height:52px;border:2px solid #17324d;border-radius:8px;background:#fff;padding:5px;box-sizing:border-box;text-align:center;cursor:grab;user-select:none;box-shadow:0 2px 5px #17324d22}.seat:active{cursor:grabbing}.seat.empty{border-style:dashed;color:#778896}.seat .seat-no{display:block;font-size:.75rem;color:#52677a}.seat .student{font-weight:700;line-height:1.25}.lecture{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);padding:12px 28px;border:3px solid #17324d;background:#fff;font-weight:700}.map-scroll{overflow:auto}.save-status{min-height:1.6em;color:#075b8c}</style></head><body><main>' +
+    '</title><style>body{margin:0;min-height:100vh;background:#f4f8fb;color:#17324d;font:16px/1.6 system-ui,sans-serif}main{box-sizing:border-box;width:min(94vw,1100px);margin:3rem auto;padding:2.25rem;background:#fff;border-radius:18px;box-shadow:0 14px 38px #17324d1c}h1{margin-top:0}p{color:#52677a}.button{display:inline-block;padding:.7rem 1.2rem;border:0;border-radius:9px;background:#087dbe;color:#fff;text-decoration:none;font-weight:700;cursor:pointer}.button.secondary{background:#e8f1f6;color:#075b8c}.profile,.table{margin:1.25rem 0;border:1px solid #dce8f0;border-radius:10px;overflow:hidden}.profile-row{display:grid;grid-template-columns:7rem 1fr;gap:.75rem;padding:.7rem 1rem;border-bottom:1px solid #dce8f0}.profile-row:last-child{border-bottom:0}.profile-row span{color:#52677a}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:.7rem;text-align:left;border-bottom:1px solid #dce8f0}.table th{background:#f6fafc;color:#52677a}.table tr:last-child td{border-bottom:0}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem}.card{display:block;padding:1.1rem;border:1px solid #dce8f0;border-radius:10px;color:inherit;text-decoration:none}.card:hover{border-color:#087dbe}.note{font-size:.9rem}.error{color:#a21d2b}.seat-map{position:relative;height:720px;min-width:900px;margin:1.25rem 0;border:2px solid #17324d;border-radius:14px;overflow:hidden;background:linear-gradient(90deg,#f6fafc 0 64%,#eef5f9 64%)}.seat-map:before{content:"固定電腦座位（拖曳學生卡片交換）";position:absolute;top:12px;left:18px;color:#52677a;font-size:.9rem}.computer-seat{position:absolute;transform:translate(-50%,-50%);width:88px;min-height:66px;border:2px solid #17324d;border-radius:8px;background:#fff;padding:6px;box-sizing:border-box;text-align:center;box-shadow:0 2px 5px #17324d22}.computer-seat.empty{border-style:dashed;color:#778896}.computer-label{display:block;font-size:.7rem;color:#52677a;margin-bottom:3px}.student-card{padding:5px 4px;border-radius:5px;background:#d9edf8;color:#17324d;font-weight:700;font-size:.85rem;line-height:1.25;cursor:grab;user-select:none}.student-card.dragging{opacity:.35}.lecture{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);padding:12px 28px;border:3px solid #17324d;background:#fff;font-weight:700}.cache-zone{position:absolute;left:14px;bottom:18px;width:230px;min-height:85px;padding:10px;border:2px dashed #52677a;border-radius:10px;background:#fffdf5;box-sizing:border-box}.cache-zone strong,.cache-zone span{display:block}.cache-zone span,.cache-empty{font-size:.78rem;color:#52677a}.cache-zone .student-card{display:inline-block;margin:5px 4px 0 0}.map-scroll{overflow:auto}.save-status{min-height:1.6em;color:#075b8c}</style></head><body><main>' +
     content + '</main></body></html>';
 }
 
@@ -193,7 +192,14 @@ async function getOrCreateSeating(supabase, classId) {
     .select("seat_key, position_x, position_y, student_id, students(id, full_name, seat_number)")
     .eq("class_id", classId);
   if (existingError) throw existingError;
-  if (existing && existing.length) return existing;
+  const fixedSeatKeys = new Set(SEAT_TEMPLATE.map(([seatKey]) => seatKey));
+  if (existing && existing.length === fixedSeatKeys.size && existing.every((seat) => fixedSeatKeys.has(seat.seat_key))) return existing;
+  // Older versions allowed free-form positions. Replace that one-time layout
+  // with the fixed computer-room grid requested by the teacher.
+  if (existing && existing.length) {
+    const { error: resetError } = await supabase.from("class_seat_assignments").delete().eq("class_id", classId);
+    if (resetError) throw resetError;
+  }
 
   const { data: enrollments, error: enrollmentError } = await supabase.from("class_enrollments")
     .select("student_id, students(id, full_name, seat_number)").eq("class_id", classId);
@@ -201,13 +207,12 @@ async function getOrCreateSeating(supabase, classId) {
 
   const students = (enrollments || []).map((item) => item.students).filter(Boolean);
   const bySeatNumber = new Map(students.map((student) => [student.seat_number, student]));
-  const assignedIds = new Set();
   const specialStudents = new Map();
   // The two front seats are normally 17 and 18. If those seats do not exist
   // in an exported roster, place the highest-numbered students (33, then 34)
   // there as requested, leaving their original computer seats empty.
   [17, 18].forEach((seatNumber, index) => {
-    specialStudents.set("front-" + seatNumber,
+    specialStudents.set("left-" + (15 + index),
       bySeatNumber.get(seatNumber) || bySeatNumber.get(33 + index) || null);
   });
   const reservedForFront = new Set([...specialStudents.values()].filter(Boolean).map((student) => student.id));
@@ -216,43 +221,27 @@ async function getOrCreateSeating(supabase, classId) {
       ? specialStudents.get(seatKey)
       : (bySeatNumber.get(preferredSeatNumber) || null);
     const usableStudent = student && (!reservedForFront.has(student.id) || specialStudents.has(seatKey)) ? student : null;
-    if (usableStudent) assignedIds.add(usableStudent.id);
     return { class_id: classId, seat_key: seatKey, student_id: usableStudent && usableStudent.id, position_x: x, position_y: y };
   });
-
-  // Put any remaining students into an unused default seat first, then a visible overflow row.
-  const remaining = students.filter((student) => !assignedIds.has(student.id));
-  let overflow = 0;
-  for (const student of remaining) {
-    const available = assignments.find((assignment) => !assignment.student_id);
-    if (available) {
-      available.student_id = student.id;
-      continue;
-    }
-    overflow += 1;
-    assignments.push({
-      class_id: classId,
-      seat_key: "overflow-" + overflow,
-      student_id: student.id,
-      position_x: 35 + overflow * 10,
-      position_y: 86
-    });
-  }
 
   const { error: insertError } = await supabase.from("class_seat_assignments").insert(assignments);
   if (insertError) throw insertError;
   return getOrCreateSeating(supabase, classId);
 }
 
-function seatMapMarkup(classId, seats) {
-  const cards = seats.map((seat) => {
-    const student = seat.students;
+function seatMapMarkup(classId, seats, cachedStudents) {
+  const seatByKey = new Map(seats.map((seat) => [seat.seat_key, seat]));
+  const fixedSeats = SEAT_TEMPLATE.map(([seatKey, x, y]) => {
+    const seat = seatByKey.get(seatKey);
+    const student = seat && seat.students;
     const label = student ? escapeHtml(student.seat_number + " 號 · " + student.full_name) : "空位";
-    return '<div class="seat' + (student ? "" : " empty") + '" draggable="true" data-seat-key="' + escapeHtml(seat.seat_key) + '" data-student-id="' + escapeHtml(seat.student_id || "") + '" style="left:' + Number(seat.position_x) + '%;top:' + Number(seat.position_y) + '%"><span class="seat-no">座位</span><span class="student">' + label + '</span></div>';
+    const card = student ? '<div class="student-card" draggable="true" data-student-id="' + escapeHtml(student.id) + '">' + label + '</div>' : "";
+    return '<div class="computer-seat' + (student ? "" : " empty") + '" data-seat-key="' + escapeHtml(seatKey) + '" data-x="' + x + '" data-y="' + y + '" style="left:' + x + '%;top:' + y + '%"><span class="computer-label">電腦座位</span>' + card + '</div>';
   }).join("");
-  return '<div class="map-scroll"><div class="seat-map" id="seat-map">' + cards + '<div class="lecture">講台</div></div></div>' +
-    '<p><button class="button" id="save-seats" type="button">儲存座位表</button> <a class="button secondary" href="/classes/' + encodeURIComponent(classId) + '">回班級名冊</a></p><p class="save-status" id="save-status"></p>' +
-    '<script>(function(){const map=document.getElementById("seat-map"),status=document.getElementById("save-status");let dragged=null;map.querySelectorAll(".seat").forEach(function(card){card.addEventListener("dragstart",function(){dragged=card});card.addEventListener("dragend",function(){dragged=null});});map.addEventListener("dragover",function(event){event.preventDefault()});map.addEventListener("drop",function(event){event.preventDefault();if(!dragged)return;const rect=map.getBoundingClientRect();const x=Math.max(4,Math.min(96,(event.clientX-rect.left)/rect.width*100));const y=Math.max(8,Math.min(91,(event.clientY-rect.top)/rect.height*100));dragged.style.left=x+"%";dragged.style.top=y+"%";});document.getElementById("save-seats").addEventListener("click",async function(){const seats=[...map.querySelectorAll(".seat")].map(function(card){return{seat_key:card.dataset.seatKey,student_id:card.dataset.studentId||null,position_x:parseFloat(card.style.left),position_y:parseFloat(card.style.top)}});status.textContent="儲存中…";try{const response=await fetch("/classes/' + encodeURIComponent(classId) + '/seating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({seats:seats})});if(!response.ok)throw new Error();status.textContent="已儲存。"}catch(_error){status.textContent="儲存失敗，請重新登入後再試。"}})})()</script>';
+  const cache = cachedStudents.map((student) => '<div class="student-card" draggable="true" data-student-id="' + escapeHtml(student.id) + '">' + escapeHtml(student.seat_number + " 號 · " + student.full_name) + '</div>').join("") || '<span class="cache-empty">暫存區目前沒有學生</span>';
+  return '<div class="map-scroll"><div class="seat-map" id="seat-map">' + fixedSeats + '<div class="cache-zone" id="cache-zone"><strong>暫存區</strong><span>未確定位置</span><div id="cache-students">' + cache + '</div></div><div class="lecture">講台</div></div></div>' +
+    '<p><button class="button secondary" id="align-seats" type="button">自動對齊</button> <button class="button" id="save-seats" type="button">儲存座位表</button> <a class="button secondary" href="/classes/' + encodeURIComponent(classId) + '">回班級名冊</a></p><p class="save-status" id="save-status"></p>' +
+    '<script>(function(){const map=document.getElementById("seat-map"),cache=document.getElementById("cache-zone"),cacheStudents=document.getElementById("cache-students"),status=document.getElementById("save-status");let dragged=null;function bind(card){card.addEventListener("dragstart",function(){dragged=card;setTimeout(function(){card.classList.add("dragging")},0)});card.addEventListener("dragend",function(){card.classList.remove("dragging");dragged=null})}document.querySelectorAll(".student-card").forEach(bind);function makeEmpty(target){target.classList.add("empty")}function refreshCache(){const hasStudents=cacheStudents.querySelector(".student-card");let empty=cacheStudents.querySelector(".cache-empty");if(!hasStudents&&!empty){empty=document.createElement("span");empty.className="cache-empty";empty.textContent="暫存區目前沒有學生";cacheStudents.appendChild(empty)}if(hasStudents&&empty)empty.remove()}function moveToCache(card){const parent=card.parentElement;cacheStudents.appendChild(card);if(parent.classList.contains("computer-seat"))makeEmpty(parent);refreshCache()}document.querySelectorAll(".computer-seat").forEach(function(seat){seat.addEventListener("dragover",function(event){event.preventDefault()});seat.addEventListener("drop",function(event){event.preventDefault();if(!dragged)return;const current=seat.querySelector(".student-card");const source=dragged.parentElement;if(current&&source.classList.contains("computer-seat")){source.appendChild(current);source.classList.remove("empty")}else if(current){moveToCache(current)}seat.appendChild(dragged);seat.classList.remove("empty");refreshCache()})});cache.addEventListener("dragover",function(event){event.preventDefault()});cache.addEventListener("drop",function(event){event.preventDefault();if(dragged)moveToCache(dragged)});document.getElementById("align-seats").addEventListener("click",function(){status.textContent="已自動對齊：所有電腦座位固定在教室版型中。"});document.getElementById("save-seats").addEventListener("click",async function(){const seats=[...map.querySelectorAll(".computer-seat")].map(function(seat){const student=seat.querySelector(".student-card");return{seat_key:seat.dataset.seatKey,student_id:student?student.dataset.studentId:null}});status.textContent="儲存中…";try{const response=await fetch("/classes/' + encodeURIComponent(classId) + '/seating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({seats:seats})});if(!response.ok)throw new Error();status.textContent="已儲存。暫存區學生尚未分配座位。"}catch(_error){status.textContent="儲存失敗，請重新登入後再試。"}})})()</script>';
 }
 
 app.get("/", async (req, res) => {
@@ -385,12 +374,17 @@ app.get("/classes/:classId/seating", async (req, res) => {
     return res.status(403).type("html").send(page("沒有權限", '<h1>沒有權限</h1><p>您未獲授權瀏覽此班級。</p>'));
   }
   try {
-    const [{ data: classInfo }, seats] = await Promise.all([
+    const [{ data: classInfo }, seats, { data: enrollments, error: enrollmentError }] = await Promise.all([
       supabase.from("classes").select("grade, class_number, subject").eq("id", classId).maybeSingle(),
-      getOrCreateSeating(supabase, classId)
+      getOrCreateSeating(supabase, classId),
+      supabase.from("class_enrollments").select("students(id, full_name, seat_number)").eq("class_id", classId)
     ]);
-    if (!classInfo) throw new Error("Class missing");
-    res.type("html").send(page("班級座位", '<h1>' + escapeHtml(classInfo.grade + " 年 " + classInfo.class_number + " 班 · 座位表") + '</h1><p>拖曳座位卡到新位置後，按「儲存座位表」。此班的調整只會影響本班。</p>' + seatMapMarkup(classId, seats)));
+    if (!classInfo || enrollmentError) throw new Error("Class missing");
+    const assignedIds = new Set(seats.map((seat) => seat.student_id).filter(Boolean));
+    const cachedStudents = (enrollments || []).map((item) => item.students).filter(Boolean)
+      .filter((student) => !assignedIds.has(student.id))
+      .sort((a, b) => a.seat_number - b.seat_number);
+    res.type("html").send(page("班級座位", '<h1>' + escapeHtml(classInfo.grade + " 年 " + classInfo.class_number + " 班 · 座位表") + '</h1><p>電腦座位位置固定。拖曳學生卡片到另一台電腦可交換；尚未排入的學生留在講台左側暫存區。</p>' + seatMapMarkup(classId, seats, cachedStudents)));
   } catch (error) {
     console.error("Seat map read failed:", error);
     res.status(500).type("html").send(page("暫時無法讀取座位表", '<h1>暫時無法讀取座位表</h1><p>請確認資料庫已執行 seating.sql。</p>'));
@@ -404,19 +398,18 @@ app.post("/classes/:classId/seating", async (req, res) => {
   const classId = req.params.classId;
   if (!await hasClassAccess(supabase, user.id, classId)) return res.status(403).json({ error: "forbidden" });
   const seats = Array.isArray(req.body && req.body.seats) ? req.body.seats : [];
-  if (!seats.length || seats.length > 50) return res.status(400).json({ error: "invalid_seats" });
+  if (seats.length !== SEAT_TEMPLATE.length) return res.status(400).json({ error: "invalid_seats" });
+  const templateByKey = new Map(SEAT_TEMPLATE.map(([seatKey, x, y]) => [seatKey, { x, y }]));
   const seenKeys = new Set();
   const studentIds = new Set();
   const records = [];
   for (const seat of seats) {
-    if (!seat || typeof seat.seat_key !== "string" || !seat.seat_key || seenKeys.has(seat.seat_key)) return res.status(400).json({ error: "invalid_seat" });
-    const x = Number(seat.position_x);
-    const y = Number(seat.position_y);
-    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 100 || y < 0 || y > 100) return res.status(400).json({ error: "invalid_position" });
+    if (!seat || typeof seat.seat_key !== "string" || !templateByKey.has(seat.seat_key) || seenKeys.has(seat.seat_key)) return res.status(400).json({ error: "invalid_seat" });
     if (seat.student_id && (typeof seat.student_id !== "string" || studentIds.has(seat.student_id))) return res.status(400).json({ error: "duplicate_student" });
     seenKeys.add(seat.seat_key);
     if (seat.student_id) studentIds.add(seat.student_id);
-    records.push({ class_id: classId, seat_key: seat.seat_key, student_id: seat.student_id || null, position_x: x, position_y: y, updated_at: new Date().toISOString() });
+    const position = templateByKey.get(seat.seat_key);
+    records.push({ class_id: classId, seat_key: seat.seat_key, student_id: seat.student_id || null, position_x: position.x, position_y: position.y, updated_at: new Date().toISOString() });
   }
   const { data: enrolled, error: enrolledError } = await supabase.from("class_enrollments").select("student_id").eq("class_id", classId);
   if (enrolledError) return res.status(500).json({ error: "database_error" });
