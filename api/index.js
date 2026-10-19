@@ -85,6 +85,12 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function isIsoDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + "T00:00:00.000Z");
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 function profileRows(user) {
   const roles = Array.isArray(user.openid_roles) ? user.openid_roles : [];
   return [
@@ -239,8 +245,38 @@ function seatMapMarkup(classId, seats, cachedStudents) {
   }).join("");
   const cache = cachedStudents.map((student) => '<div class="student-card" draggable="true" data-student-id="' + escapeHtml(student.id) + '"><span class="student-number">' + escapeHtml(student.seat_number + " 號") + '</span><span class="student-name">' + escapeHtml(student.full_name) + '</span></div>').join("") || '<span class="cache-empty">暫存區目前沒有學生</span>';
   return '<div class="map-scroll"><div class="seat-map" id="seat-map">' + fixedSeats + '<div class="cache-zone" id="cache-zone"><strong>暫存區</strong><span>未確定位置</span><div id="cache-students">' + cache + '</div></div><div class="lecture">講台</div></div></div>' +
-    '<p><button class="button secondary" id="align-seats" type="button">自動對齊</button> <button class="button" id="save-seats" type="button">儲存座位表</button> <a class="button secondary" href="/classes/' + encodeURIComponent(classId) + '">回班級名冊</a></p><p class="save-status" id="save-status"></p>' +
-    '<script>(function(){const map=document.getElementById("seat-map"),cache=document.getElementById("cache-zone"),cacheStudents=document.getElementById("cache-students"),status=document.getElementById("save-status");let dragged=null;function bind(card){card.addEventListener("dragstart",function(){dragged=card;setTimeout(function(){card.classList.add("dragging")},0)});card.addEventListener("dragend",function(){card.classList.remove("dragging");dragged=null})}document.querySelectorAll(".student-card").forEach(bind);function makeEmpty(target){target.classList.add("empty")}function refreshCache(){const hasStudents=cacheStudents.querySelector(".student-card");let empty=cacheStudents.querySelector(".cache-empty");if(!hasStudents&&!empty){empty=document.createElement("span");empty.className="cache-empty";empty.textContent="暫存區目前沒有學生";cacheStudents.appendChild(empty)}if(hasStudents&&empty)empty.remove()}function moveToCache(card){const parent=card.parentElement;cacheStudents.appendChild(card);if(parent.classList.contains("computer-seat"))makeEmpty(parent);refreshCache()}document.querySelectorAll(".computer-seat").forEach(function(seat){seat.addEventListener("dragover",function(event){event.preventDefault()});seat.addEventListener("drop",function(event){event.preventDefault();if(!dragged)return;const current=seat.querySelector(".student-card");const source=dragged.parentElement;if(current&&source.classList.contains("computer-seat")){source.appendChild(current);source.classList.remove("empty")}else if(current){moveToCache(current)}seat.appendChild(dragged);seat.classList.remove("empty");refreshCache()})});cache.addEventListener("dragover",function(event){event.preventDefault()});cache.addEventListener("drop",function(event){event.preventDefault();if(dragged)moveToCache(dragged)});document.getElementById("align-seats").addEventListener("click",function(){status.textContent="已自動對齊：所有電腦座位固定在教室版型中。"});document.getElementById("save-seats").addEventListener("click",async function(){const seats=[...map.querySelectorAll(".computer-seat")].map(function(seat){const student=seat.querySelector(".student-card");return{seat_key:seat.dataset.seatKey,student_id:student?student.dataset.studentId:null}});status.textContent="儲存中…";try{const response=await fetch("/classes/' + encodeURIComponent(classId) + '/seating",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({seats:seats})});if(!response.ok)throw new Error();status.textContent="已儲存。暫存區學生尚未分配座位。"}catch(_error){status.textContent="儲存失敗，請重新登入後再試。"}})})()</script>';
+    '<p><button class="button secondary" id="align-seats" type="button">自動對齊</button> <button class="button" id="save-seats" type="button">儲存座位表</button> <a class="button secondary" href="/classes/' + encodeURIComponent(classId) + '/seating">回座位表</a></p><p class="save-status" id="save-status"></p>' +
+    '<script>(function(){const map=document.getElementById("seat-map"),cache=document.getElementById("cache-zone"),cacheStudents=document.getElementById("cache-students"),status=document.getElementById("save-status");let dragged=null;function bind(card){card.addEventListener("dragstart",function(){dragged=card;setTimeout(function(){card.classList.add("dragging")},0)});card.addEventListener("dragend",function(){card.classList.remove("dragging");dragged=null})}document.querySelectorAll(".student-card").forEach(bind);function makeEmpty(target){target.classList.add("empty")}function refreshCache(){const hasStudents=cacheStudents.querySelector(".student-card");let empty=cacheStudents.querySelector(".cache-empty");if(!hasStudents&&!empty){empty=document.createElement("span");empty.className="cache-empty";empty.textContent="暫存區目前沒有學生";cacheStudents.appendChild(empty)}if(hasStudents&&empty)empty.remove()}function moveToCache(card){const parent=card.parentElement;cacheStudents.appendChild(card);if(parent.classList.contains("computer-seat"))makeEmpty(parent);refreshCache()}document.querySelectorAll(".computer-seat").forEach(function(seat){seat.addEventListener("dragover",function(event){event.preventDefault()});seat.addEventListener("drop",function(event){event.preventDefault();if(!dragged)return;const current=seat.querySelector(".student-card");const source=dragged.parentElement;if(current&&source.classList.contains("computer-seat")){source.appendChild(current);source.classList.remove("empty")}else if(current){moveToCache(current)}seat.appendChild(dragged);seat.classList.remove("empty");refreshCache()})});cache.addEventListener("dragover",function(event){event.preventDefault()});cache.addEventListener("drop",function(event){event.preventDefault();if(dragged)moveToCache(dragged)});document.getElementById("align-seats").addEventListener("click",function(){status.textContent="已自動對齊：所有電腦座位固定在教室版型中。"});document.getElementById("save-seats").addEventListener("click",async function(){const seats=[...map.querySelectorAll(".computer-seat")].map(function(seat){const student=seat.querySelector(".student-card");return{seat_key:seat.dataset.seatKey,student_id:student?student.dataset.studentId:null}});status.textContent="儲存中…";try{const response=await fetch("/classes/' + encodeURIComponent(classId) + '/seating/edit",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({seats:seats})});if(!response.ok)throw new Error();status.textContent="已儲存。暫存區學生尚未分配座位。"}catch(_error){status.textContent="儲存失敗，請重新登入後再試。"}})})()</script>';
+}
+
+function attendanceLabel(record) {
+  return ({ leave: "事病假", late: "遲到", bonus: "+1 分" })[record.record_type] || "紀錄";
+}
+
+function attendanceCardMarkup(student, records) {
+  const summary = records.length
+    ? records.map((record) => attendanceLabel(record)).join("、")
+    : "出席";
+  const state = records.length ? " has-record" : " present";
+  return '<button class="attendance-card' + state + '" type="button" data-student-id="' + escapeHtml(student.id) + '" data-student-name="' + escapeHtml(student.full_name) + '"><span class="student-number">' + escapeHtml(student.seat_number + " 號") + '</span><span class="student-name">' + escapeHtml(student.full_name) + '</span><span class="attendance-summary">' + escapeHtml(summary) + '</span></button>';
+}
+
+function attendanceMapMarkup(classId, seats, cachedStudents, attendanceRecords, recordDate) {
+  const byStudentId = new Map();
+  for (const record of attendanceRecords) {
+    const records = byStudentId.get(record.student_id) || [];
+    records.push(record);
+    byStudentId.set(record.student_id, records);
+  }
+  const seatByKey = new Map(seats.map((seat) => [seat.seat_key, seat]));
+  const fixedSeats = SEAT_TEMPLATE.map(([seatKey, x, y]) => {
+    const seat = seatByKey.get(seatKey);
+    const student = seat && seat.students;
+    return '<div class="computer-seat' + (student ? "" : " empty") + '" style="left:' + x + '%;top:' + y + '%">' + (student ? attendanceCardMarkup(student, byStudentId.get(student.id) || []) : "") + '</div>';
+  }).join("");
+  const cache = cachedStudents.map((student) => attendanceCardMarkup(student, byStudentId.get(student.id) || [])).join("") || '<span class="cache-empty">暫存區目前沒有學生</span>';
+  const recordData = JSON.stringify(attendanceRecords).replace(/</g, "\\u003c");
+  return '<style>.attendance-map:before{content:"座位表（點選學生記錄狀況）"}.attendance-card{width:100%;border:0;border-radius:5px;background:#d9edf8;color:#17324d;padding:5px 3px;font:700 .86rem/1.25 system-ui,sans-serif;cursor:pointer}.attendance-card:hover{background:#bfe1f3}.attendance-card.has-record{background:#fff1d6}.attendance-summary{display:block;margin-top:3px;font-size:.7rem;color:#52677a}.attendance-card.has-record .attendance-summary{color:#985400}.attendance-cache{position:absolute;left:14px;bottom:18px;width:230px;min-height:85px;padding:10px;border:2px dashed #52677a;border-radius:10px;background:#fffdf5;box-sizing:border-box}.attendance-cache strong,.attendance-cache span{display:block}.attendance-cache .attendance-card{display:inline-block;width:auto;min-width:75px;margin:5px 4px 0 0}.attendance-cache .attendance-summary{display:none}.attendance-dialog{width:min(92vw,440px);border:0;border-radius:14px;padding:1.3rem;box-shadow:0 18px 48px #17324d55}.attendance-dialog::backdrop{background:#17324d88}.record-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0}.record-actions button{border:0;border-radius:8px;padding:.55rem .75rem;background:#e8f1f6;color:#075b8c;font-weight:700;cursor:pointer}.reason-input{width:100%;box-sizing:border-box;padding:.65rem;border:1px solid #bfd1de;border-radius:8px;font:inherit}.record-history{margin:.8rem 0}.record-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.45rem 0;border-bottom:1px solid #dce8f0}.record-row button{border:0;background:none;color:#a21d2b;cursor:pointer}.dialog-close{float:right;border:0;background:none;font-size:1.25rem;cursor:pointer}</style><form class="date-form" method="get"><label>點名日期 <input type="date" name="date" value="' + escapeHtml(recordDate) + '"></label> <button class="button secondary" type="submit">查看紀錄</button></form><div class="map-scroll"><div class="seat-map attendance-map" id="attendance-map">' + fixedSeats + '<div class="attendance-cache"><strong>暫存區</strong><span>未確定位置</span><div>' + cache + '</div></div><div class="lecture">講台</div></div></div><p>預設全數出席。點選學生可登記事病假、遲到或加分；每次加分固定為 +1 分。</p><p><a class="button secondary" href="/classes/' + encodeURIComponent(classId) + '/seating/edit">調整座位</a> <a class="button secondary" href="/classes/' + encodeURIComponent(classId) + '">回班級名冊</a></p><dialog class="attendance-dialog" id="attendance-dialog"><button class="dialog-close" type="button" aria-label="關閉">×</button><h2 id="dialog-name"></h2><p id="dialog-seat"></p><div class="record-actions"><button type="button" data-record-type="leave">事病假</button><button type="button" data-record-type="late">遲到</button><button type="button" data-record-type="bonus">加分 +1</button></div><label>理由（可不填）<textarea class="reason-input" id="record-reason" maxlength="500" rows="3"></textarea></label><div class="record-history" id="record-history"></div></dialog><script id="attendance-record-data" type="application/json">' + recordData + '</script><script>(function(){const dialog=document.getElementById("attendance-dialog"),name=document.getElementById("dialog-name"),seat=document.getElementById("dialog-seat"),reason=document.getElementById("record-reason"),history=document.getElementById("record-history"),records=JSON.parse(document.getElementById("attendance-record-data").textContent),date="' + escapeHtml(recordDate) + '",classId="' + encodeURIComponent(classId) + '";let studentId=null;const label={leave:"事病假",late:"遲到",bonus:"加分 +1"};function currentRecords(){return records.filter(function(record){return record.student_id===studentId})}function renderHistory(){history.replaceChildren();const items=currentRecords();if(!items.length){const empty=document.createElement("p");empty.textContent="本日尚無紀錄（預設出席）。";history.appendChild(empty);return}items.forEach(function(record){const row=document.createElement("div");row.className="record-row";const text=document.createElement("span");text.textContent=label[record.record_type]+(record.reason?"："+record.reason:"");const remove=document.createElement("button");remove.type="button";remove.textContent="移除";remove.addEventListener("click",async function(){if(!confirm("確定移除此紀錄？"))return;const response=await fetch("/classes/"+classId+"/attendance/"+record.id,{method:"DELETE"});if(response.ok)location.reload();else alert("移除失敗，請重新登入後再試。")});row.append(text,remove);history.appendChild(row)})}document.querySelectorAll(".attendance-card").forEach(function(card){card.addEventListener("click",function(){studentId=card.dataset.studentId;name.textContent=card.dataset.studentName;seat.textContent=card.querySelector(".student-number").textContent;reason.value="";renderHistory();dialog.showModal()})});document.querySelector(".dialog-close").addEventListener("click",function(){dialog.close()});document.querySelectorAll("[data-record-type]").forEach(function(button){button.addEventListener("click",async function(){if(!studentId)return;button.disabled=true;const response=await fetch("/classes/"+classId+"/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({student_id:studentId,record_type:button.dataset.recordType,reason:reason.value,record_date:date})});if(response.ok)location.reload();else{button.disabled=false;alert("儲存失敗，請重新登入後再試。")}})})})()</script>';
 }
 
 app.get("/", async (req, res) => {
@@ -361,10 +397,74 @@ app.get("/classes/:classId", async (req, res) => {
   const rows = (enrollments || []).map((item) => item.students).filter(Boolean)
     .sort((a, b) => a.seat_number - b.seat_number)
     .map((student) => '<tr><td>' + escapeHtml(student.seat_number) + '</td><td>' + escapeHtml(student.full_name) + '</td><td>尚未建立評量</td></tr>').join("");
-  res.type("html").send(page("班級名冊", '<h1>' + escapeHtml(classInfo.grade + " 年 " + classInfo.class_number + " 班 · " + classInfo.subject) + '</h1><p>目前僅供瀏覽名冊；成績欄尚未開放填寫或顯示。</p><p><a class="button" href="/classes/' + encodeURIComponent(classId) + '/seating">顯示與調整班級座位</a></p><table class="table"><thead><tr><th>座號</th><th>姓名</th><th>成績狀態</th></tr></thead><tbody>' + rows + '</tbody></table><a class="button secondary" href="/dashboard">回我的班級</a>'));
+  res.type("html").send(page("班級名冊", '<h1>' + escapeHtml(classInfo.grade + " 年 " + classInfo.class_number + " 班 · " + classInfo.subject) + '</h1><p>目前僅供瀏覽名冊；成績欄尚未開放填寫或顯示。</p><p><a class="button" href="/classes/' + encodeURIComponent(classId) + '/seating">座位表</a></p><table class="table"><thead><tr><th>座號</th><th>姓名</th><th>成績狀態</th></tr></thead><tbody>' + rows + '</tbody></table><a class="button secondary" href="/dashboard">回我的班級</a>'));
 });
 
 app.get("/classes/:classId/seating", async (req, res) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const supabase = getSupabase();
+  const classId = req.params.classId;
+  const recordDate = isIsoDate(req.query.date) ? req.query.date : new Date().toISOString().slice(0, 10);
+  if (!await hasClassAccess(supabase, user.id, classId)) {
+    return res.status(403).type("html").send(page("沒有權限", '<h1>沒有權限</h1><p>您未獲授權瀏覽此班級。</p>'));
+  }
+  try {
+    const [{ data: classInfo }, seats, { data: enrollments, error: enrollmentError }, { data: attendanceRecords, error: attendanceError }] = await Promise.all([
+      supabase.from("classes").select("grade, class_number, subject").eq("id", classId).maybeSingle(),
+      getOrCreateSeating(supabase, classId),
+      supabase.from("class_enrollments").select("students(id, full_name, seat_number)").eq("class_id", classId),
+      supabase.from("student_attendance_records").select("id, student_id, record_type, reason, points, record_date, created_at").eq("class_id", classId).eq("record_date", recordDate).order("created_at")
+    ]);
+    if (!classInfo || enrollmentError || attendanceError) throw new Error("Class or attendance data missing");
+    const assignedIds = new Set(seats.map((seat) => seat.student_id).filter(Boolean));
+    const cachedStudents = (enrollments || []).map((item) => item.students).filter(Boolean)
+      .filter((student) => !assignedIds.has(student.id))
+      .sort((a, b) => a.seat_number - b.seat_number);
+    res.type("html").send(page("座位表與點名", '<h1>' + escapeHtml(classInfo.grade + " 年 " + classInfo.class_number + " 班 · 座位表與點名") + '</h1>' + attendanceMapMarkup(classId, seats, cachedStudents, attendanceRecords || [], recordDate)));
+  } catch (error) {
+    console.error("Attendance map read failed:", error);
+    res.status(500).type("html").send(page("暫時無法讀取座位表", '<h1>暫時無法讀取座位表</h1><p>請先在 Supabase SQL Editor 執行 attendance.sql。</p>'));
+  }
+});
+
+app.post("/classes/:classId/attendance", async (req, res) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const supabase = getSupabase();
+  const classId = req.params.classId;
+  if (!await hasClassAccess(supabase, user.id, classId)) return res.status(403).json({ error: "forbidden" });
+  const { student_id: studentId, record_type: recordType, record_date: recordDate } = req.body || {};
+  const reason = typeof (req.body && req.body.reason) === "string" ? req.body.reason.trim() : "";
+  if (typeof studentId !== "string" || !["leave", "late", "bonus"].includes(recordType) || !isIsoDate(recordDate) || reason.length > 500) {
+    return res.status(400).json({ error: "invalid_record" });
+  }
+  const { data: enrollment, error: enrollmentError } = await supabase.from("class_enrollments")
+    .select("student_id").eq("class_id", classId).eq("student_id", studentId).maybeSingle();
+  if (enrollmentError || !enrollment) return res.status(400).json({ error: "student_not_in_class" });
+  const { error: insertError } = await supabase.from("student_attendance_records").insert({
+    class_id: classId, student_id: studentId, record_date: recordDate, record_type: recordType,
+    reason: reason || null, points: recordType === "bonus" ? 1 : 0, created_by: user.id
+  });
+  if (insertError) return res.status(500).json({ error: "database_error" });
+  res.json({ ok: true });
+});
+
+app.delete("/classes/:classId/attendance/:recordId", async (req, res) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const supabase = getSupabase();
+  const classId = req.params.classId;
+  if (!await hasClassAccess(supabase, user.id, classId)) return res.status(403).json({ error: "forbidden" });
+  const { data: record, error: recordError } = await supabase.from("student_attendance_records")
+    .select("id").eq("id", req.params.recordId).eq("class_id", classId).maybeSingle();
+  if (recordError || !record) return res.status(404).json({ error: "record_not_found" });
+  const { error: deleteError } = await supabase.from("student_attendance_records").delete().eq("id", record.id);
+  if (deleteError) return res.status(500).json({ error: "database_error" });
+  res.json({ ok: true });
+});
+
+app.get("/classes/:classId/seating/edit", async (req, res) => {
   const user = await requireUser(req, res);
   if (!user) return;
   const supabase = getSupabase();
@@ -390,7 +490,7 @@ app.get("/classes/:classId/seating", async (req, res) => {
   }
 });
 
-app.post("/classes/:classId/seating", async (req, res) => {
+app.post("/classes/:classId/seating/edit", async (req, res) => {
   const user = await requireUser(req, res);
   if (!user) return;
   const supabase = getSupabase();

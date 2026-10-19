@@ -14,10 +14,11 @@ This Vercel app verifies New Taipei City Education OpenID on the server, then gr
 
 1. Create a private Supabase project.
 2. Open **SQL Editor**, paste and run [supabase/schema.sql](supabase/schema.sql).
-3. In Vercel, set the three variables in [.env.example](.env.example). Use the **service_role** key only as a Vercel server environment variable.
-4. Deploy, sign in once with OpenID, then use the Supabase Table Editor to find your `app_users` row.
-5. Import the roster locally (not from GitHub): `npm install`, set the environment variables, then run `npm run import:roster -- "C:\\path\\to\\export.xls"`.
-6. In the SQL Editor, give only the intended teacher access to their classes:
+3. For the seating and attendance pages, also run [supabase/seating.sql](supabase/seating.sql) and [supabase/attendance.sql](supabase/attendance.sql).
+4. In Vercel, set the three variables in [.env.example](.env.example). Use the **service_role** key only as a Vercel server environment variable.
+5. Deploy, sign in once with OpenID, then use the Supabase Table Editor to find your `app_users` row.
+6. Import the roster locally (not from GitHub): `npm install`, set the environment variables, then run `npm run import:roster -- "C:\\path\\to\\export.xls"`.
+7. In the SQL Editor, give only the intended teacher access to their classes:
 
 ```sql
 insert into public.teacher_class_access (user_id, class_id)
