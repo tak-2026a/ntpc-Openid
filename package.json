@@ -1,16 +1,19 @@
 {
-  "name": "ntpc-openid-name-demo",
-  "version": "1.0.0",
+  "name": "ntpc-openid-grade-viewer",
+  "version": "1.1.0",
   "private": true,
-  "description": "新北市教育局 OpenID 2.0 登入範例：僅顯示姓名",
+  "description": "新北市教育局 OpenID 2.0 成績瀏覽系統",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "import:roster": "node scripts/import-roster.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
     "express": "^4.21.2",
-    "openid": "^2.0.14"
+    "openid": "^2.0.14",
+    "xlsx": "^0.18.5"
   }
 }
