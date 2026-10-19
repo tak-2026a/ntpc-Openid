@@ -83,6 +83,12 @@ function canImportRoster(user) {
   return Array.isArray(user.openid_roles) && user.openid_roles.includes("教師");
 }
 
+function makeStudentCode(grade, classNumber, seatNumber) {
+  return [grade, classNumber, seatNumber]
+    .map((value) => String(value).padStart(2, "0"))
+    .join("");
+}
+
 async function importRoster(workbook, supabase) {
   const schoolYear = String(process.env.SCHOOL_YEAR || "115");
   const totals = { classes: 0, students: 0, enrollments: 0, skipped: 0 };
@@ -103,7 +109,12 @@ async function importRoster(workbook, supabase) {
       const fullName = String(row[1] || "").trim();
       if (!Number.isInteger(seatNumber) || seatNumber < 1 || !fullName) continue;
       const { data: student, error: studentError } = await supabase.from("students").upsert({
-        school_year: schoolYear, grade, class_number: classNumber, seat_number: seatNumber, full_name: fullName
+        school_year: schoolYear,
+        grade,
+        class_number: classNumber,
+        seat_number: seatNumber,
+        student_code: makeStudentCode(grade, classNumber, seatNumber),
+        full_name: fullName
       }, { onConflict: "school_year,grade,class_number,seat_number" }).select("id").single();
       if (studentError) throw studentError;
       totals.students += 1;
