@@ -1,0 +1,16 @@
+{
+  "name": "ntpc-openid-name-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "新北市教育局 OpenID 2.0 登入範例：僅顯示姓名",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "openid": "^2.0.14"
+  }
+}
