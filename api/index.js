@@ -39,6 +39,33 @@ function escapeHtml(value) {
   }[character]));
 }
 
+function parseAuthorization(value) {
+  if (!value) return [];
+
+  try {
+    const items = JSON.parse(value);
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+}
+
+function uniqueValues(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function formatStudentNumber(language) {
+  if (!/^\d{6}$/.test(language || "")) return "未提供";
+
+  const [grade, classNumber, seatNumber] = [
+    language.slice(0, 2),
+    language.slice(2, 4),
+    language.slice(4, 6)
+  ].map((part) => String(Number(part)));
+
+  return `${grade} 年 ${classNumber} 班 ${seatNumber} 號`;
+}
+
 function page(content) {
   return `<!doctype html>
 <html lang="zh-Hant">
@@ -51,7 +78,11 @@ function page(content) {
     main { box-sizing: border-box; width: min(92vw, 520px); padding: 2.5rem; text-align: center; background: #fff; border-radius: 18px; box-shadow: 0 14px 38px #17324d1c; }
     h1 { margin-top: 0; font-size: 1.55rem; } p { color: #52677a; }
     .button { display: inline-block; padding: .7rem 1.2rem; border-radius: 9px; background: #087dbe; color: #fff; text-decoration: none; font-weight: 700; }
-    .name { margin: 1.5rem 0; font-size: 2rem; font-weight: 800; color: #075b8c; }
+    .profile { margin: 1.5rem 0; text-align: left; border: 1px solid #dce8f0; border-radius: 10px; overflow: hidden; }
+    .profile-row { display: grid; grid-template-columns: 7rem 1fr; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid #dce8f0; }
+    .profile-row:last-child { border-bottom: 0; }
+    .profile-row span { color: #52677a; }
+    .profile-row strong { overflow-wrap: anywhere; color: #075b8c; }
     .note { font-size: .9rem; } .error { color: #a21d2b; }
   </style>
 </head>
@@ -98,10 +129,34 @@ app.all("/auth/ntpc/callback", (req, res) => {
       return;
     }
 
+    const authorization = parseAuthorization(result.timezone);
+    const roles = uniqueValues(authorization.map((item) => item.role));
+    const jobGroups = uniqueValues(
+      authorization.flatMap((item) => Array.isArray(item.groups) ? item.groups : [])
+    );
+    const units = uniqueValues([
+      result.country,
+      ...authorization.map((item) => item.name)
+    ]);
+    const isStudent = roles.includes("學生");
+    const rows = [
+      ["單位名稱", units.join("、") || "未提供"],
+      ["職務別", jobGroups.join("、") || "未提供"],
+      ["身分別", roles.join("、") || "未提供"],
+      ...(isStudent ? [["年級座號", formatStudentNumber(result.language)]] : []),
+      ["姓名", name]
+    ];
+
+    const profile = rows.map(([label, value]) => `
+      <div class="profile-row">
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value)}</strong>
+      </div>
+    `).join("");
+
     res.type("html").send(page(`
       <h1>登入成功</h1>
-      <p>你好，</p>
-      <p class="name">${escapeHtml(name)}</p>
+      <div class="profile">${profile}</div>
       <p class="note">此範例不儲存姓名、帳號或其他 OpenID 個資。</p>
       <a class="button" href="/">回首頁</a>
     `));
