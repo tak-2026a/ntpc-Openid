@@ -1,169 +1,233 @@
 "use strict";
 
+const crypto = require("crypto");
 const express = require("express");
 const openid = require("openid");
+const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
 app.disable("x-powered-by");
+app.use((_req, res, next) => {
+  res.set({
+    "Cache-Control": "no-store, private",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff"
+  });
+  next();
+});
 
 const NTPC_OPENID_IDENTIFIER = "https://openid.ntpc.edu.tw/";
+const SESSION_COOKIE = "ntpc_grade_session";
+const SESSION_DAYS = 8;
 
 function getBaseUrl() {
-  // APP_BASE_URL supports a custom domain. VERCEL_URL makes first deployment work
-  // without manually entering the generated *.vercel.app address.
-  const deployedUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
+  const deployedUrl = process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : null;
   return (process.env.APP_BASE_URL || deployedUrl || "http://localhost:3000").replace(/\/$/, "");
+}
+
+function getSupabase() {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
 }
 
 function createRelyingParty() {
   return new openid.RelyingParty(
-    `${getBaseUrl()}/auth/ntpc/callback`,
+    getBaseUrl() + "/auth/ntpc/callback",
     null,
     false,
     false,
-    [
-      new openid.SimpleRegistration({
-        fullname: true,
-        country: true,
-        language: true,
-        timezone: true
-      })
-    ]
+    [new openid.SimpleRegistration({ fullname: true, country: true, language: true, timezone: true })]
   );
 }
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[character]));
 }
 
-function parseAuthorization(value) {
-  if (!value) return [];
+function page(title, content) {
+  return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' +
+    escapeHtml(title) +
+    '</title><style>body{margin:0;min-height:100vh;background:#f4f8fb;color:#17324d;font:16px/1.6 system-ui,sans-serif}main{box-sizing:border-box;width:min(94vw,900px);margin:3rem auto;padding:2.25rem;background:#fff;border-radius:18px;box-shadow:0 14px 38px #17324d1c}h1{margin-top:0}p{color:#52677a}.button{display:inline-block;padding:.7rem 1.2rem;border:0;border-radius:9px;background:#087dbe;color:#fff;text-decoration:none;font-weight:700;cursor:pointer}.button.secondary{background:#e8f1f6;color:#075b8c}.profile,.table{margin:1.25rem 0;border:1px solid #dce8f0;border-radius:10px;overflow:hidden}.profile-row{display:grid;grid-template-columns:7rem 1fr;gap:.75rem;padding:.7rem 1rem;border-bottom:1px solid #dce8f0}.profile-row:last-child{border-bottom:0}.profile-row span{color:#52677a}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:.7rem;text-align:left;border-bottom:1px solid #dce8f0}.table th{background:#f6fafc;color:#52677a}.table tr:last-child td{border-bottom:0}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem}.card{display:block;padding:1.1rem;border:1px solid #dce8f0;border-radius:10px;color:inherit;text-decoration:none}.card:hover{border-color:#087dbe}.note{font-size:.9rem}.error{color:#a21d2b}</style></head><body><main>' +
+    content + '</main></body></html>';
+}
 
+function parseAuthorization(value) {
   try {
-    const items = JSON.parse(value);
+    const items = JSON.parse(value || "[]");
     return Array.isArray(items) ? items : [];
   } catch {
     return [];
   }
 }
 
-function uniqueValues(values) {
+function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function formatStudentNumber(language) {
-  if (!/^\d{6}$/.test(language || "")) return "未提供";
-
-  const [grade, classNumber, seatNumber] = [
-    language.slice(0, 2),
-    language.slice(2, 4),
-    language.slice(4, 6)
-  ].map((part) => String(Number(part)));
-
-  return `${grade} 年 ${classNumber} 班 ${seatNumber} 號`;
+function profileRows(user) {
+  const roles = Array.isArray(user.openid_roles) ? user.openid_roles : [];
+  return [
+    ["姓名", user.display_name],
+    ["身分別", roles.join("、") || "已驗證使用者"]
+  ].map(([label, value]) => '<div class="profile-row"><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></div>').join("");
 }
 
-function page(content) {
-  return `<!doctype html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>新北市 OpenID 登入範例</title>
-  <style>
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f8fb; color: #17324d; font: 16px/1.6 system-ui, sans-serif; }
-    main { box-sizing: border-box; width: min(92vw, 520px); padding: 2.5rem; text-align: center; background: #fff; border-radius: 18px; box-shadow: 0 14px 38px #17324d1c; }
-    h1 { margin-top: 0; font-size: 1.55rem; } p { color: #52677a; }
-    .button { display: inline-block; padding: .7rem 1.2rem; border-radius: 9px; background: #087dbe; color: #fff; text-decoration: none; font-weight: 700; }
-    .profile { margin: 1.5rem 0; text-align: left; border: 1px solid #dce8f0; border-radius: 10px; overflow: hidden; }
-    .profile-row { display: grid; grid-template-columns: 7rem 1fr; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid #dce8f0; }
-    .profile-row:last-child { border-bottom: 0; }
-    .profile-row span { color: #52677a; }
-    .profile-row strong { overflow-wrap: anywhere; color: #075b8c; }
-    .note { font-size: .9rem; } .error { color: #a21d2b; }
-  </style>
-</head>
-<body><main>${content}</main></body>
-</html>`;
+function parseCookies(req) {
+  return Object.fromEntries((req.headers.cookie || "").split(";").map((part) => {
+    const index = part.indexOf("=");
+    return index === -1 ? [] : [part.slice(0, index).trim(), decodeURIComponent(part.slice(index + 1))];
+  }).filter((pair) => pair.length));
 }
 
-app.get("/", (_req, res) => {
-  res.type("html").send(page(`
-    <h1>新北市教育局 OpenID</h1>
-    <p>登入後會顯示必要的單位、職務、身分資料；學生另顯示年級座號。</p>
-    <a class="button" href="/login">使用新北市 OpenID 登入</a>
-  `));
+function setSessionCookie(res, token) {
+  const maxAge = SESSION_DAYS * 24 * 60 * 60;
+  res.append("Set-Cookie", SESSION_COOKIE + "=" + encodeURIComponent(token) +
+    "; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=" + maxAge);
+}
+
+function clearSessionCookie(res) {
+  res.append("Set-Cookie", SESSION_COOKIE + "=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
+}
+
+async function getCurrentUser(req) {
+  const supabase = getSupabase();
+  const token = parseCookies(req)[SESSION_COOKIE];
+  if (!supabase || !token || !/^[a-f0-9]{64}$/.test(token)) return null;
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const { data: session } = await supabase.from("app_sessions")
+    .select("user_id, expires_at").eq("token_hash", tokenHash).maybeSingle();
+  if (!session || new Date(session.expires_at) <= new Date()) return null;
+  const { data: user } = await supabase.from("app_users")
+    .select("id, display_name, openid_roles, student_code").eq("id", session.user_id).maybeSingle();
+  return user || null;
+}
+
+async function requireUser(req, res) {
+  const user = await getCurrentUser(req);
+  if (!user) {
+    res.redirect(303, "/");
+    return null;
+  }
+  return user;
+}
+
+async function hasClassAccess(supabase, userId, classId) {
+  const { data } = await supabase.from("teacher_class_access")
+    .select("class_id").eq("user_id", userId).eq("class_id", classId).maybeSingle();
+  return Boolean(data);
+}
+
+app.get("/", async (req, res) => {
+  const user = await getCurrentUser(req);
+  if (user) return res.redirect(303, "/dashboard");
+  res.type("html").send(page("成績瀏覽系統", '<h1>成績瀏覽系統</h1><p>請先使用新北市教育局 OpenID 登入。班級名冊與成績不會在登入前顯示。</p><a class="button" href="/login">使用新北市 OpenID 登入</a>'));
 });
 
 app.get("/login", (_req, res) => {
-  const relyingParty = createRelyingParty();
-
-  relyingParty.authenticate(NTPC_OPENID_IDENTIFIER, false, (error, authUrl) => {
+  createRelyingParty().authenticate(NTPC_OPENID_IDENTIFIER, false, (error, authUrl) => {
     if (error || !authUrl) {
-      res.status(502).type("html").send(page(`
-        <h1>暫時無法建立登入請求</h1>
-        <p class="error">請確認 APP_BASE_URL 已設定為目前的公開 HTTPS 網址。</p>
-        <a class="button" href="/">回首頁</a>
-      `));
-      return;
+      return res.status(502).type("html").send(page("無法登入", '<h1>暫時無法建立登入請求</h1><p class="error">請確認 APP_BASE_URL 是目前公開的 HTTPS 網址。</p>'));
     }
     res.redirect(authUrl);
   });
 });
 
 app.all("/auth/ntpc/callback", (req, res) => {
-  const relyingParty = createRelyingParty();
-
-  relyingParty.verifyAssertion(req, (error, result) => {
+  createRelyingParty().verifyAssertion(req, async (error, result) => {
     const name = result && (result.fullname || result.nickname);
+    const identity = result && (result.claimedIdentifier || result.claimed_id || result.identity);
+    const supabase = getSupabase();
 
-    if (error || !result || !name) {
-      res.status(401).type("html").send(page(`
-        <h1>登入未完成</h1>
-        <p class="error">OpenID 驗證失敗，或服務端沒有授權回傳姓名。</p>
-        <a class="button" href="/">重新登入</a>
-      `));
-      return;
+    if (error || !result || !name || !identity) {
+      return res.status(401).type("html").send(page("登入未完成", '<h1>登入未完成</h1><p class="error">OpenID 驗證失敗，或服務端沒有授權回傳必要資料。</p><a class="button" href="/">重新登入</a>'));
+    }
+    if (!supabase) {
+      return res.status(503).type("html").send(page("資料庫尚未設定", '<h1>OpenID 已驗證</h1><p>資料庫尚未設定，因此系統不會建立登入工作階段或顯示學生資料。</p>'));
     }
 
-    const authorization = parseAuthorization(result.timezone);
-    const roles = uniqueValues(authorization.map((item) => item.role));
-    const jobGroups = uniqueValues(
-      authorization.flatMap((item) => Array.isArray(item.groups) ? item.groups : [])
-    );
-    const units = uniqueValues([
-      result.country,
-      ...authorization.map((item) => item.name)
-    ]);
-    const isStudent = roles.includes("學生");
-    const rows = [
-      ["單位名稱", units.join("、") || "未提供"],
-      ["職務別", jobGroups.join("、") || "未提供"],
-      ["身分別", roles.join("、") || "未提供"],
-      ...(isStudent ? [["年級座號", formatStudentNumber(result.language)]] : []),
-      ["姓名", name]
-    ];
+    try {
+      const authorization = parseAuthorization(result.timezone);
+      const roles = unique(authorization.map((item) => item.role));
+      const studentCode = /^\d{6}$/.test(result.language || "") ? result.language : null;
+      const { data: user, error: userError } = await supabase.from("app_users").upsert({
+        openid_identity: identity,
+        display_name: name,
+        openid_roles: roles,
+        student_code: studentCode,
+        last_login_at: new Date().toISOString()
+      }, { onConflict: "openid_identity" }).select().single();
+      if (userError) throw userError;
 
-    const profile = rows.map(([label, value]) => `
-      <div class="profile-row">
-        <span>${escapeHtml(label)}</span>
-        <strong>${escapeHtml(value)}</strong>
-      </div>
-    `).join("");
-
-    res.type("html").send(page(`
-      <h1>登入成功</h1>
-      <div class="profile">${profile}</div>
-      <p class="note">此範例不儲存姓名、帳號或其他 OpenID 個資。</p>
-      <a class="button" href="/">回首頁</a>
-    `));
+      const token = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+      const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      await supabase.from("app_sessions").delete().lt("expires_at", new Date().toISOString());
+      const { error: sessionError } = await supabase.from("app_sessions").insert({
+        token_hash: tokenHash, user_id: user.id, expires_at: expiresAt
+      });
+      if (sessionError) throw sessionError;
+      setSessionCookie(res, token);
+      res.redirect(303, "/dashboard");
+    } catch {
+      res.status(500).type("html").send(page("無法建立安全工作階段", '<h1>登入未完成</h1><p class="error">系統無法建立安全工作階段，未顯示任何學生資料。</p>'));
+    }
   });
+});
+
+app.get("/dashboard", async (req, res) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const supabase = getSupabase();
+  const { data, error } = await supabase.from("teacher_class_access")
+    .select("class_id, classes(id, school_year, grade, class_number, subject)")
+    .eq("user_id", user.id);
+  if (error) return res.status(500).type("html").send(page("系統錯誤", '<h1>暫時無法讀取班級</h1>'));
+
+  const cards = (data || []).map((item) => {
+    const classInfo = item.classes;
+    if (!classInfo) return "";
+    return '<a class="card" href="/classes/' + encodeURIComponent(classInfo.id) + '"><strong>' +
+      escapeHtml(classInfo.grade + " 年 " + classInfo.class_number + " 班") +
+      '</strong><br><span>' + escapeHtml(classInfo.subject) + " · " + escapeHtml(classInfo.school_year) + ' 學年度</span></a>';
+  }).join("");
+  const empty = cards ? "" : '<p class="note">尚未指派可瀏覽的班級。即使是教師帳號，也必須由系統管理者在私有資料庫逐班授權。</p>';
+  res.type("html").send(page("我的班級", '<h1>我的班級</h1><div class="profile">' + profileRows(user) + '</div><div class="cards">' + cards + '</div>' + empty + '<p><a class="button secondary" href="/logout">登出</a></p>'));
+});
+
+app.get("/classes/:classId", async (req, res) => {
+  const user = await requireUser(req, res);
+  if (!user) return;
+  const supabase = getSupabase();
+  const classId = req.params.classId;
+  if (!await hasClassAccess(supabase, user.id, classId)) {
+    return res.status(403).type("html").send(page("沒有權限", '<h1>沒有權限</h1><p>您未獲授權瀏覽此班級。</p><a class="button" href="/dashboard">回我的班級</a>'));
+  }
+
+  const [{ data: classInfo }, { data: enrollments, error }] = await Promise.all([
+    supabase.from("classes").select("grade, class_number, subject, school_year").eq("id", classId).maybeSingle(),
+    supabase.from("class_enrollments").select("students(full_name, seat_number)").eq("class_id", classId)
+  ]);
+  if (error || !classInfo) return res.status(500).type("html").send(page("系統錯誤", '<h1>暫時無法讀取名冊</h1>'));
+
+  const rows = (enrollments || []).map((item) => item.students).filter(Boolean)
+    .sort((a, b) => a.seat_number - b.seat_number)
+    .map((student) => '<tr><td>' + escapeHtml(student.seat_number) + '</td><td>' + escapeHtml(student.full_name) + '</td><td>尚未建立評量</td></tr>').join("");
+  res.type("html").send(page("班級名冊", '<h1>' + escapeHtml(classInfo.grade + " 年 " + classInfo.class_number + " 班 · " + classInfo.subject) + '</h1><p>目前僅供瀏覽名冊；成績欄尚未開放填寫或顯示。</p><table class="table"><thead><tr><th>座號</th><th>姓名</th><th>成績狀態</th></tr></thead><tbody>' + rows + '</tbody></table><a class="button secondary" href="/dashboard">回我的班級</a>'));
+});
+
+app.get("/logout", async (req, res) => {
+  const supabase = getSupabase();
+  const token = parseCookies(req)[SESSION_COOKIE];
+  if (supabase && token && /^[a-f0-9]{64}$/.test(token)) {
+    const hash = crypto.createHash("sha256").update(token).digest("hex");
+    await supabase.from("app_sessions").delete().eq("token_hash", hash);
+  }
+  clearSessionCookie(res);
+  res.redirect(303, "/");
 });
 
 module.exports = app;
