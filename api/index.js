@@ -96,7 +96,7 @@ function page(content) {
 app.get("/", (_req, res) => {
   res.type("html").send(page(`
     <h1>新北市教育局 OpenID</h1>
-    <p>登入後，這個範例只會顯示 OpenID 回傳的中文姓名。</p>
+    <p>登入後會顯示必要的單位、職務、身分資料；學生另顯示年級座號。</p>
     <a class="button" href="/login">使用新北市 OpenID 登入</a>
   `));
 });
